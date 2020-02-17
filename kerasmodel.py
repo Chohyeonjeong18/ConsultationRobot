@@ -119,8 +119,8 @@ class Display():
     def stt_tts(self):
         def get_user_say():
             user_say = STT().recog()
-            self.robot_talk_curr = "한번더 다시 말해줄 수 있니?"
             while user_say == None:
+                self.robot_talk_curr = "한번더 다시 말해줄 수 있니?"
                 user_say = STT().recog()
                 self.i=self.i+1
                 TTS().text_to_speech(self.robot_talk_curr,self.i)
@@ -134,13 +134,13 @@ class Display():
             emotion_word = emotion_classify(user_say)
             life_word = life_classify(user_say)
             if emotion_word and life_word:
-                self.robot_talk_curr = life_word + "때문에" + emotion_word+"것 같이 들리는데요. 제가 제대로 이해했나요?"
+                self.robot_talk_curr = life_word + "때문에" + emotion_word+" 것 같이 들리는데요. 제가 제대로 이해했나요?"
                 robot_talk()
                 
         if self.emotion_step==1 and self.robot_talk_curr != self.robot_talk_prev :
             self.prev_text_curr = self.real_emotion_curr
-            TTS().text_to_speech(self.robot_talk_curr,self.i)
-
+            
+            robot_talk()
             user_say = get_user_say()
             emotion_word = emotion_classify(user_say)
             life_word = life_classify(user_say)
@@ -152,18 +152,15 @@ class Display():
             if user_say == "예" : 
                 self.robot_talk_curr = life_word + "에 대해서 어떻게 생각하시나요?"
                 robot_talk()
+                user_say = get_user_say()
                 self.emotion_step = 2
             else: 
                 self.robot_talk_curr = "제가 잘못 이해했군요. 조금더 자세히 말씀해주실수 있나요?"
-                robot_talk()
-
-
+                self.stt_tts()
+                
         elif self.emotion_step==2 and self.robot_talk_curr != self.robot_talk_prev :
             self.emotion_step=1
-            self.i=self.i+1
-            print("sujin  ", self.robot_talk_curr)
-            TTS().text_to_speech(self.robot_talk_curr, self.i)
-
+            robot_talk()
         
         self.emotion_prev = self.emotion_curr
         self.real_emotion_prev = self.real_emotion_curr
