@@ -14,11 +14,12 @@ from voiceinput import STT
 
 from emotionword import emotion_classify
 from lifeword import life_classify
+from YesOrNo import YesOrNO_classify
 
 class Display():
     def __init__(self):
         self.prev_text_curr = " "
-        
+
         self.real_emotion_prev = " "
         self.real_emotion_curr = " "
 
@@ -46,7 +47,6 @@ class Display():
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             faces = facecasc.detectMultiScale(gray,scaleFactor=1.3, minNeighbors=5)
 
-            #얼굴선택
             for (x, y, w, h) in faces:
                 cv2.rectangle(frame, (x, y-50), (x+w, y+h+10), (255, 0, 0), 2)
                 roi_gray = gray[y:y + h, x:x + w]
@@ -54,7 +54,7 @@ class Display():
                 prediction = model.predict(cropped_img)
                 maxindex = int(np.argmax(prediction))
                 self.emotion_curr = emotion_dict[maxindex]
-                
+
                 if threading.activeCount() == 1 :
                     self.get_real_emotion()
                     t1 = threading.Thread(target = self.stt_tts)
@@ -71,7 +71,9 @@ class Display():
 
     def get_real_emotion(self):
         def emotion_step_one():
-            text_dict = {0:"너 슬퍼보이는구나. 왜 슬프니?", 1:"너 화가 나 보이는구나. 왜 화가 났니?", 2:"너 기분이 좋아보이는구나. 왜 기쁘니?",}
+            text_dict = {0:"표정이 슬퍼보이시네요. 왜 슬프신가요?",
+                         1:"표정이 화가 나 보이시네요. 왜 화가 나셨나요?",
+                         2:"표정이 좋아보이시네요. 왜 기쁘신가요?",}
             if self.real_emotion_prev =="Happy" or self.real_emotion_prev =="Neutral" :
                      if self.real_emotion_curr=="Angry" :
                          self.robot_talk_curr = text_dict[1]
@@ -89,7 +91,9 @@ class Display():
                          self.robot_talk_curr = text_dict[1]
 
         def emotion_step_two():
-            text_dict_second_reponse = {0:"나도 너가 기분이 좋아서 기분이 좋아", 1:"난 너의 문제가 해결되어 너의 기분이 나아지길 바래", 2:"너가 기분이 조금이라도 좋아진 것 같아 다행이야"}
+            text_dict_second_reponse = {0:"나도 너가 기분이 좋아서 기분이 좋아",
+                                        1:"난 너의 문제가 해결되어 너의 기분이 나아지길 바래",
+                                        2:"너가 기분이 조금이라도 좋아진 것 같아 다행이야"}
             if self.real_emotion_curr =="Happy" :
                     if self.prev_text_curr == "Happy" :
                         self.robot_talk_curr = text_dict_second_reponse[0]
@@ -114,32 +118,46 @@ class Display():
                 emotion_step_two()
 
     def stt_tts(self):
-        if self.emotion_step==1 and self.robot_talk_curr != self.robot_talk_prev :
-            self.prev_text_curr = self.real_emotion_curr
-            self.emotion_step = 2
-            TTS().text_to_speech(self.robot_talk_curr,self.i)
+        def get_user_say():
             user_say = STT().recog()
-            
-            self.robot_talk_curr = "한번더 다시 말해줄 수 있니?"
             while user_say == None:
+                self.robot_talk_curr = "한번더 다시 말해줄 수 있니?"
                 user_say = STT().recog()
                 self.i=self.i+1
                 TTS().text_to_speech(self.robot_talk_curr,self.i)
-            
+            return user_say
+
+        def robot_talk():
+            self.i=self.i+1
+            TTS().text_to_speech(self.robot_talk_curr,self.i)
+
+
+        if self.emotion_step==1 and self.robot_talk_curr != self.robot_talk_prev :
+            self.prev_text_curr = self.real_emotion_curr
+
+            robot_talk()
+            user_say = get_user_say()
             emotion_word = emotion_classify(user_say)
             life_word = life_classify(user_say)
             if emotion_word and life_word:
-                self.robot_talk_curr = life_word + "이 널" + emotion_word+"했구나"
-                self.i=self.i+1
-                TTS().text_to_speech(self.robot_talk_curr,self.i)
+                self.robot_talk_curr = life_word + "때문에" + emotion_word+"것 같이 들리는데요. 제가 제대로 이해했나요?"
+                robot_talk()
+
+            user_say = get_user_say()
+            YesOrNo_word = YesOrNO_classify(user_say)
+            if YesOrNo_word == "Yes" :
+                self.robot_talk_curr = life_word + "에 대해서 어떻게 생각하시나요?"
+                robot_talk()
+                user_say = get_user_say()
+                self.emotion_step = 2
+            elif YesOrNo_word == "No":
+                self.robot_talk_curr = "제가 잘못 이해했군요. 조금더 자세히 말씀해주실수 있나요?"
+                self.stt_tts()
 
         elif self.emotion_step==2 and self.robot_talk_curr != self.robot_talk_prev :
             self.emotion_step=1
-            self.i=self.i+1
-            print("sujin  ", self.robot_talk_curr)
-            TTS().text_to_speech(self.robot_talk_curr, self.i)
+            robot_talk()
 
-        
         self.emotion_prev = self.emotion_curr
         self.real_emotion_prev = self.real_emotion_curr
         self.robot_talk_prev = self.robot_talk_curr
