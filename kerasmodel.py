@@ -14,7 +14,7 @@ from voiceinput import STT
 
 from emotionword import emotion_classify
 from lifeword import life_classify
-from YesOrNo import YesOrNO_classify
+from yesorno import yesorno_classify
 
 class Display():
     def __init__(self):
@@ -144,13 +144,13 @@ class Display():
                 robot_talk()
 
             user_say = get_user_say()
-            YesOrNo_word = YesOrNO_classify(user_say)
-            if YesOrNo_word == "Yes" :
+            yesorno_word = yesorno_classify(user_say)
+            if yesorno_word == "Yes" :
                 self.robot_talk_curr = life_word + "에 대해서 어떻게 생각하시나요?"
                 robot_talk()
                 user_say = get_user_say()
                 self.emotion_step = 2
-            elif YesOrNo_word == "No":
+            elif yesorno_word == "No":
                 self.robot_talk_curr = "제가 잘못 이해했군요. 조금더 자세히 말씀해주실수 있나요?"
                 self.stt_tts()
 
